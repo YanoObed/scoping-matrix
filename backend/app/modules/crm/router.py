@@ -57,11 +57,14 @@ router = APIRouter(
 )
 
 
-def permission_error(exc: PermissionError) -> HTTPException:
+def permission_error(
+    exc: PermissionError,
+) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail=str(exc),
     )
+
 
 @router.get(
     "/dashboard",
@@ -78,6 +81,7 @@ def dashboard(
         db,
         membership,
     )
+
 
 @router.get(
     "/companies",
@@ -131,7 +135,9 @@ def companies(
 def add_company(
     workspace_id: UUID,
     data: CompanyCreate,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     try:
@@ -154,7 +160,9 @@ def add_company(
 def company(
     workspace_id: UUID,
     company_id: UUID,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     result = get_company(
@@ -180,7 +188,9 @@ def edit_company(
     workspace_id: UUID,
     company_id: UUID,
     data: CompanyUpdate,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     result = get_company(
@@ -218,7 +228,9 @@ def edit_company(
 def remove_company(
     workspace_id: UUID,
     company_id: UUID,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     result = get_company(
@@ -300,7 +312,9 @@ def contacts(
 def add_contact(
     workspace_id: UUID,
     data: ContactCreate,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     try:
@@ -323,7 +337,9 @@ def add_contact(
 def contact(
     workspace_id: UUID,
     contact_id: UUID,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     result = get_contact(
@@ -349,7 +365,9 @@ def edit_contact(
     workspace_id: UUID,
     contact_id: UUID,
     data: ContactUpdate,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     result = get_contact(
@@ -387,7 +405,9 @@ def edit_contact(
 def remove_contact(
     workspace_id: UUID,
     contact_id: UUID,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     result = get_contact(
@@ -474,7 +494,9 @@ def deals(
 def add_deal(
     workspace_id: UUID,
     data: DealCreate,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     try:
@@ -488,6 +510,7 @@ def add_deal(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
+
 
 @router.get(
     "/deals/{deal_id}/stage-history",
@@ -519,6 +542,7 @@ def deal_stage_history(
         deal_id,
     )
 
+
 @router.get(
     "/deals/{deal_id}",
     response_model=DealRead,
@@ -526,7 +550,9 @@ def deal_stage_history(
 def deal(
     workspace_id: UUID,
     deal_id: UUID,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     result = get_deal(
@@ -552,7 +578,9 @@ def edit_deal(
     workspace_id: UUID,
     deal_id: UUID,
     data: DealUpdate,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     result = get_deal(
@@ -590,7 +618,9 @@ def edit_deal(
 def remove_deal(
     workspace_id: UUID,
     deal_id: UUID,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     result = get_deal(
@@ -626,6 +656,11 @@ def activities(
         max_length=255,
     ),
     type: ActivityType | None = None,
+    activity_status: Literal[
+        "open",
+        "completed",
+        "overdue",
+    ] | None = None,
     company_id: UUID | None = None,
     contact_id: UUID | None = None,
     deal_id: UUID | None = None,
@@ -659,6 +694,7 @@ def activities(
         membership,
         search=search,
         type=type,
+        activity_status=activity_status,
         company_id=company_id,
         contact_id=contact_id,
         deal_id=deal_id,
@@ -678,7 +714,9 @@ def activities(
 def add_activity(
     workspace_id: UUID,
     data: ActivityCreate,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     try:
@@ -701,7 +739,9 @@ def add_activity(
 def activity(
     workspace_id: UUID,
     activity_id: UUID,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     result = get_activity(
@@ -727,7 +767,9 @@ def edit_activity(
     workspace_id: UUID,
     activity_id: UUID,
     data: ActivityUpdate,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     result = get_activity(
@@ -765,7 +807,9 @@ def edit_activity(
 def remove_activity(
     workspace_id: UUID,
     activity_id: UUID,
-    membership: WorkspaceMembership = Depends(get_current_membership),
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
     db: Session = Depends(get_db),
 ):
     result = get_activity(

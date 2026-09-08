@@ -4031,3 +4031,58 @@ tbody tr:hover {
   text-align: center;
   color: #909a9b;
 }
+
+/* Activity status */
+
+.activity-status {
+  display: inline-flex;
+
+  padding: 4px 8px;
+
+  border-radius: 999px;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.activity-status.pending {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.activity-status.completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.activity-status.overdue {
+  background: #fff1f2;
+  color: #e73846;
+}
+
+.activity-related-links {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 5px 10px;
+}
+
+.activity-related-links a {
+  color: #467c9e;
+
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.activity-related-links a:hover {
+  text-decoration: underline;
+}
+
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+
+  align-items: center;
+
+  gap: 8px;
+}

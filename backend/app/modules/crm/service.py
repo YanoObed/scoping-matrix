@@ -317,27 +317,12 @@ def update_company(
         exclude_unset=True,
     )
 
-    if "stage" in changes:
-        new_stage = changes["stage"]
-
-        if (
-            new_stage is not None
-            and new_stage != deal.stage
-        ):
-            db.add(
-                DealStageHistory(
-                    workspace_id=membership.workspace_id,
-                    deal_id=deal.id,
-                    from_stage=deal.stage.value,
-                    to_stage=new_stage.value,
-                    changed_by_membership_id=membership.id,
-                )
-            )
-
     if "owner_membership_id" in changes:
         ensure_owner_change_allowed(membership)
 
-        owner_membership_id = changes["owner_membership_id"]
+        owner_membership_id = changes[
+            "owner_membership_id"
+        ]
 
         validate_owner_membership(
             db,
@@ -345,18 +330,25 @@ def update_company(
             owner_membership_id,
         )
 
-        company.owner_membership_id = owner_membership_id
+        company.owner_membership_id = (
+            owner_membership_id
+        )
 
     if "name" in changes:
         name = changes["name"]
 
         if name is not None:
             name = name.strip()
+
             company.name = name
-            company.normalized_name = normalize_company_name(name)
+
+            company.normalized_name = (
+                normalize_company_name(name)
+            )
 
     if "domain" in changes:
         domain = changes["domain"]
+
         company.domain = (
             normalize_domain(domain)
             if domain
@@ -560,12 +552,16 @@ def create_contact(
     normalized_email = None
 
     if data.email:
-        normalized_email = normalize_email(data.email)
+        normalized_email = normalize_email(
+            data.email
+        )
 
-        existing_contact = get_contact_by_normalized_email(
-            db,
-            membership.workspace_id,
-            normalized_email,
+        existing_contact = (
+            get_contact_by_normalized_email(
+                db,
+                membership.workspace_id,
+                normalized_email,
+            )
         )
 
         if existing_contact is not None:
@@ -664,7 +660,9 @@ def update_contact(
     if "owner_membership_id" in changes:
         ensure_owner_change_allowed(membership)
 
-        owner_membership_id = changes["owner_membership_id"]
+        owner_membership_id = changes[
+            "owner_membership_id"
+        ]
 
         validate_owner_membership(
             db,
@@ -672,7 +670,9 @@ def update_contact(
             owner_membership_id,
         )
 
-        contact.owner_membership_id = owner_membership_id
+        contact.owner_membership_id = (
+            owner_membership_id
+        )
 
     if "company_id" in changes:
         company_id = changes["company_id"]
@@ -695,12 +695,16 @@ def update_contact(
         email = changes["email"]
 
         if email:
-            normalized_email = normalize_email(email)
+            normalized_email = normalize_email(
+                email
+            )
 
-            existing_contact = get_contact_by_normalized_email(
-                db,
-                membership.workspace_id,
-                normalized_email,
+            existing_contact = (
+                get_contact_by_normalized_email(
+                    db,
+                    membership.workspace_id,
+                    normalized_email,
+                )
             )
 
             if (
@@ -712,7 +716,9 @@ def update_contact(
                 )
 
             contact.email = email.strip()
-            contact.normalized_email = normalized_email
+            contact.normalized_email = (
+                normalized_email
+            )
 
         else:
             contact.email = None
@@ -785,6 +791,7 @@ def get_deal(
 
     return db.scalar(statement)
 
+
 def list_deal_stage_history(
     db: Session,
     membership: WorkspaceMembership,
@@ -813,6 +820,7 @@ def list_deal_stage_history(
     )
 
     return list(db.scalars(statement).all())
+
 
 def list_deals(
     db: Session,
@@ -971,10 +979,29 @@ def update_deal(
         exclude_unset=True,
     )
 
+    if "stage" in changes:
+        new_stage = changes["stage"]
+
+        if (
+            new_stage is not None
+            and new_stage != deal.stage
+        ):
+            db.add(
+                DealStageHistory(
+                    workspace_id=membership.workspace_id,
+                    deal_id=deal.id,
+                    from_stage=deal.stage.value,
+                    to_stage=new_stage.value,
+                    changed_by_membership_id=membership.id,
+                )
+            )
+
     if "owner_membership_id" in changes:
         ensure_owner_change_allowed(membership)
 
-        owner_membership_id = changes["owner_membership_id"]
+        owner_membership_id = changes[
+            "owner_membership_id"
+        ]
 
         validate_owner_membership(
             db,
@@ -982,7 +1009,9 @@ def update_deal(
             owner_membership_id,
         )
 
-        deal.owner_membership_id = owner_membership_id
+        deal.owner_membership_id = (
+            owner_membership_id
+        )
 
     if "company_id" in changes:
         company_id = changes["company_id"]
@@ -1081,6 +1110,7 @@ def list_activities(
     membership: WorkspaceMembership,
     search: str | None = None,
     type: ActivityType | None = None,
+    activity_status: str | None = None,
     company_id: UUID | None = None,
     contact_id: UUID | None = None,
     deal_id: UUID | None = None,
@@ -1109,6 +1139,31 @@ def list_activities(
     if type is not None:
         conditions.append(
             Activity.type == type
+        )
+
+    if activity_status == "completed":
+        conditions.append(
+            Activity.completed_at.is_not(None)
+        )
+
+    elif activity_status == "overdue":
+        conditions.extend(
+            [
+                Activity.completed_at.is_(None),
+                Activity.due_at.is_not(None),
+                Activity.due_at < func.now(),
+            ]
+        )
+
+    elif activity_status == "open":
+        conditions.extend(
+            [
+                Activity.completed_at.is_(None),
+                or_(
+                    Activity.due_at.is_(None),
+                    Activity.due_at >= func.now(),
+                ),
+            ]
         )
 
     if company_id is not None:
@@ -1253,7 +1308,9 @@ def update_activity(
     if "owner_membership_id" in changes:
         ensure_owner_change_allowed(membership)
 
-        owner_membership_id = changes["owner_membership_id"]
+        owner_membership_id = changes[
+            "owner_membership_id"
+        ]
 
         validate_owner_membership(
             db,
@@ -1261,7 +1318,9 @@ def update_activity(
             owner_membership_id,
         )
 
-        activity.owner_membership_id = owner_membership_id
+        activity.owner_membership_id = (
+            owner_membership_id
+        )
 
     if "company_id" in changes:
         company_id = changes["company_id"]
@@ -1353,6 +1412,7 @@ def delete_activity(
 
     db.delete(activity)
     db.commit()
+
 
 def get_dashboard_summary(
     db: Session,

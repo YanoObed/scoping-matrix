@@ -2,17 +2,17 @@ import {
   Link,
 } from "react-router-dom";
 
+import {
+  contactName,
+  formatDateTime,
+} from "../../lib/crm";
+
 import type {
   Activity,
   Company,
   Contact,
   Deal,
 } from "../../types/crm";
-
-import {
-  contactName,
-  formatDateTime,
-} from "../../lib/crm";
 
 
 type Props = {
@@ -39,8 +39,8 @@ type Props = {
 };
 
 
-function typeLabel(
-  value: Activity["type"],
+function labelType(
+  value: string,
 ) {
   return (
     value.charAt(0).toUpperCase() +
@@ -59,163 +59,158 @@ export default function ActivityTable({
   onDelete,
   onToggleComplete,
 }: Props) {
-  const companyNames =
-    new Map(
-      companies.map(
-        (company) => [
-          company.id,
-          company.name,
-        ],
-      ),
-    );
-
-  const contactNames =
-    new Map(
-      contacts.map(
-        (contact) => [
-          contact.id,
-          contactName(contact),
-        ],
-      ),
-    );
-
-  const dealNames =
-    new Map(
-      deals.map(
-        (deal) => [
-          deal.id,
-          deal.name,
-        ],
-      ),
-    );
-
-
   return (
     <div className="table-wrapper">
-      <table className="activity-table">
+      <table>
         <thead>
           <tr>
-            <th>Activity</th>
-            <th>Type</th>
-            <th>Related To</th>
-            <th>Due</th>
-            <th>Status</th>
-            <th>Owner</th>
-            <th>Actions</th>
+            <th>
+              Subject
+            </th>
+
+            <th>
+              Type
+            </th>
+
+            <th>
+              Related To
+            </th>
+
+            <th>
+              Due
+            </th>
+
+            <th>
+              Status
+            </th>
+
+            <th>
+              Owner
+            </th>
+
+            <th>
+              Actions
+            </th>
           </tr>
         </thead>
+
 
         <tbody>
           {activities.map(
             (activity) => {
-              const related = [
+              const company =
                 activity.company_id
-                  ? {
-                      label:
-                        companyNames.get(
-                          activity.company_id,
-                        ) || "Company",
+                  ? companies.find(
+                      (item) =>
+                        item.id ===
+                        activity.company_id,
+                    )
+                  : undefined;
 
-                      to:
-                        `/companies/${activity.company_id}`,
-                    }
-                  : null,
-
+              const contact =
                 activity.contact_id
-                  ? {
-                      label:
-                        contactNames.get(
-                          activity.contact_id,
-                        ) || "Contact",
+                  ? contacts.find(
+                      (item) =>
+                        item.id ===
+                        activity.contact_id,
+                    )
+                  : undefined;
 
-                      to:
-                        `/contacts/${activity.contact_id}`,
-                    }
-                  : null,
-
+              const deal =
                 activity.deal_id
-                  ? {
-                      label:
-                        dealNames.get(
-                          activity.deal_id,
-                        ) || "Deal",
+                  ? deals.find(
+                      (item) =>
+                        item.id ===
+                        activity.deal_id,
+                    )
+                  : undefined;
 
-                      to:
-                        `/deals/${activity.deal_id}`,
-                    }
-                  : null,
-              ].filter(
-                (
-                  item,
-                ): item is {
-                  label: string;
-                  to: string;
-                } => item !== null,
-              );
+
+              const overdue =
+                !activity.completed_at &&
+                Boolean(
+                  activity.due_at,
+                ) &&
+                new Date(
+                  activity.due_at as string,
+                ).getTime() <
+                  Date.now();
 
 
               return (
-                <tr key={activity.id}>
+                <tr
+                  key={
+                    activity.id
+                  }
+                >
                   <td>
-                    <div className="activity-subject-cell">
-                      <strong>
-                        {activity.subject}
-                      </strong>
+                    <strong>
+                      {
+                        activity.subject
+                      }
+                    </strong>
+                  </td>
 
-                      {activity.description && (
-                        <span>
+
+                  <td>
+                    {labelType(
+                      activity.type,
+                    )}
+                  </td>
+
+
+                  <td>
+                    <div className="activity-related-links">
+                      {company && (
+                        <Link
+                          to={`/companies/${company.id}`}
+                        >
                           {
-                            activity.description
+                            company.name
                           }
-                        </span>
+                        </Link>
                       )}
+
+
+                      {contact && (
+                        <Link
+                          to={`/contacts/${contact.id}`}
+                        >
+                          {contactName(
+                            contact,
+                          )}
+                        </Link>
+                      )}
+
+
+                      {deal && (
+                        <Link
+                          to={`/deals/${deal.id}`}
+                        >
+                          {
+                            deal.name
+                          }
+                        </Link>
+                      )}
+
+
+                      {!company &&
+                        !contact &&
+                        !deal && (
+                          <span>
+                            —
+                          </span>
+                        )}
                     </div>
                   </td>
 
 
                   <td>
-                    <span
-                      className={
-                        `activity-type-badge type-${activity.type}`
-                      }
-                    >
-                      {typeLabel(
-                        activity.type,
-                      )}
-                    </span>
-                  </td>
-
-
-                  <td>
-                    {related.length ? (
-                      <div className="activity-related">
-                        {related.map(
-                          (item) => (
-                            <Link
-                              key={
-                                item.to
-                              }
-                              to={
-                                item.to
-                              }
-                            >
-                              {
-                                item.label
-                              }
-                            </Link>
-                          ),
-                        )}
-                      </div>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-
-
-                  <td>
-                    {formatDateTime(
-                      activity.due_at,
-                    )}
+                    {activity.due_at
+                      ? formatDateTime(
+                          activity.due_at,
+                        )
+                      : "—"}
                   </td>
 
 
@@ -224,28 +219,24 @@ export default function ActivityTable({
                       className={
                         activity.completed_at
                           ? "activity-status completed"
-                          : "activity-status pending"
+                          : overdue
+                            ? "activity-status overdue"
+                            : "activity-status pending"
                       }
                     >
                       {activity.completed_at
                         ? "Completed"
-                        : "Open"}
+                        : overdue
+                          ? "Overdue"
+                          : "Open"}
                     </span>
                   </td>
 
 
                   <td>
-                    <span
-                      className={
-                        activity.owner_membership_id
-                          ? "owner-badge"
-                          : "owner-badge unassigned"
-                      }
-                    >
-                      {ownerName(
-                        activity,
-                      )}
-                    </span>
+                    {ownerName(
+                      activity,
+                    )}
                   </td>
 
 
@@ -253,7 +244,7 @@ export default function ActivityTable({
                     <div className="table-actions">
                       <button
                         type="button"
-                        className="table-complete-button"
+                        className="text-action-button"
                         onClick={() =>
                           onToggleComplete(
                             activity,
@@ -268,7 +259,7 @@ export default function ActivityTable({
 
                       <button
                         type="button"
-                        className="table-edit-button"
+                        className="text-action-button"
                         onClick={() =>
                           onEdit(
                             activity,
@@ -281,7 +272,7 @@ export default function ActivityTable({
 
                       <button
                         type="button"
-                        className="table-delete-button"
+                        className="text-action-button danger-text"
                         onClick={() =>
                           onDelete(
                             activity,
