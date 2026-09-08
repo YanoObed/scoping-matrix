@@ -439,6 +439,16 @@ class DealRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
+class DealSummaryRead(BaseModel):
+    open_deals: int
+    open_value: Decimal
+    won_deals: int
+    won_value: Decimal
+    lost_deals: int
+    lost_value: Decimal
+
+
 class DealStageHistoryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -448,7 +458,8 @@ class DealStageHistoryRead(BaseModel):
     to_stage: DealStage
     changed_by_membership_id: UUID
     created_at: datetime
-    
+
+
 class ActivityCreate(BaseModel):
     company_id: UUID | None = None
     contact_id: UUID | None = None
@@ -503,6 +514,7 @@ class ActivityRead(BaseModel):
     completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
 
 class DashboardRead(BaseModel):
     companies: int

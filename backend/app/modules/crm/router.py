@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.modules.crm.models.deal import DealStage
 from app.modules.crm.models.activity import ActivityType
+from app.modules.crm.models.deal import DealStage
 from app.modules.crm.schemas import (
     ActivityCreate,
     ActivityRead,
@@ -17,11 +17,12 @@ from app.modules.crm.schemas import (
     ContactCreate,
     ContactRead,
     ContactUpdate,
+    DashboardRead,
     DealCreate,
     DealRead,
-    DealUpdate,
-    DashboardRead,
     DealStageHistoryRead,
+    DealSummaryRead,
+    DealUpdate,
 )
 from app.modules.crm.service import (
     create_activity,
@@ -35,13 +36,14 @@ from app.modules.crm.service import (
     get_activity,
     get_company,
     get_contact,
-    get_deal,
     get_dashboard_summary,
+    get_deal,
+    get_deal_summary,
     list_activities,
     list_companies,
     list_contacts,
-    list_deals,
     list_deal_stage_history,
+    list_deals,
     update_activity,
     update_company,
     update_contact,
@@ -510,6 +512,23 @@ def add_deal(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from exc
+
+
+@router.get(
+    "/deals/summary",
+    response_model=DealSummaryRead,
+)
+def deal_summary(
+    workspace_id: UUID,
+    membership: WorkspaceMembership = Depends(
+        get_current_membership
+    ),
+    db: Session = Depends(get_db),
+):
+    return get_deal_summary(
+        db,
+        membership,
+    )
 
 
 @router.get(

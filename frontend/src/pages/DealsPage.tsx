@@ -40,6 +40,7 @@ import {
 } from "../lib/api";
 
 import {
+  formatCurrency,
   memberName,
   optionalText,
 } from "../lib/crm";
@@ -64,6 +65,7 @@ const stages: DealStage[] = [
   "lost",
 ];
 
+
 type SortBy =
   | "name"
   | "amount"
@@ -71,8 +73,23 @@ type SortBy =
   | "created_at"
   | "updated_at";
 
-type SortOrder = "asc" | "desc";
-type View = "list" | "pipeline";
+type SortOrder =
+  | "asc"
+  | "desc";
+
+type View =
+  | "list"
+  | "pipeline";
+
+
+type DealSummary = {
+  open_deals: number;
+  open_value: number | string;
+  won_deals: number;
+  won_value: number | string;
+  lost_deals: number;
+  lost_value: number | string;
+};
 
 
 function toForm(
@@ -80,23 +97,33 @@ function toForm(
 ): DealFormData {
   return {
     name: deal.name,
+
     amount:
       deal.amount === null
         ? ""
         : String(deal.amount),
+
     stage: deal.stage,
+
     probability:
       deal.probability === null
         ? ""
-        : String(deal.probability),
+        : String(
+            deal.probability,
+          ),
+
     expected_close_date:
       deal.expected_close_date ?? "",
+
     description:
       deal.description ?? "",
+
     company_id:
       deal.company_id ?? "",
+
     contact_id:
       deal.contact_id ?? "",
+
     owner_membership_id:
       deal.owner_membership_id ?? "",
   };
@@ -109,17 +136,22 @@ export default function DealsPage() {
   } =
     useOutletContext<AppOutletContext>();
 
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
   const [
     searchParams,
     setSearchParams,
-  ] = useSearchParams();
+  ] =
+    useSearchParams();
+
 
   const [
     view,
     setView,
-  ] = useState<View>("list");
+  ] =
+    useState<View>("list");
+
 
   const canManageOwners =
     workspace.role !== "member";
@@ -134,121 +166,160 @@ export default function DealsPage() {
   const [
     deals,
     setDeals,
-  ] = useState<Deal[]>([]);
+  ] =
+    useState<Deal[]>([]);
+
+  const [
+    summary,
+    setSummary,
+  ] =
+    useState<DealSummary | null>(
+      null,
+    );
+
+  const [
+    summaryError,
+    setSummaryError,
+  ] =
+    useState("");
+
 
   const [
     companies,
     setCompanies,
-  ] = useState<Company[]>([]);
+  ] =
+    useState<Company[]>([]);
 
   const [
     contacts,
     setContacts,
-  ] = useState<Contact[]>([]);
+  ] =
+    useState<Contact[]>([]);
+
 
   const [
     loading,
     setLoading,
-  ] = useState(true);
+  ] =
+    useState(true);
 
   const [
     error,
     setError,
-  ] = useState("");
+  ] =
+    useState("");
+
 
   const [
     searchInput,
     setSearchInput,
-  ] = useState("");
+  ] =
+    useState("");
 
   const [
     search,
     setSearch,
-  ] = useState("");
+  ] =
+    useState("");
 
   const [
     stageFilter,
     setStageFilter,
-  ] = useState("");
+  ] =
+    useState("");
 
   const [
     companyFilter,
     setCompanyFilter,
-  ] = useState("");
+  ] =
+    useState("");
+
 
   const [
     sortBy,
     setSortBy,
-  ] = useState<SortBy>(
-    "created_at",
-  );
+  ] =
+    useState<SortBy>(
+      "created_at",
+    );
 
   const [
     sortOrder,
     setSortOrder,
-  ] = useState<SortOrder>(
-    "desc",
-  );
+  ] =
+    useState<SortOrder>(
+      "desc",
+    );
 
   const [
     page,
     setPage,
-  ] = useState(0);
+  ] =
+    useState(0);
 
 
   const [
     editing,
     setEditing,
-  ] = useState<Deal | null>(
-    null,
-  );
+  ] =
+    useState<Deal | null>(
+      null,
+    );
 
   const [
     form,
     setForm,
-  ] = useState<DealFormData>(
-    emptyDealForm,
-  );
+  ] =
+    useState<DealFormData>(
+      emptyDealForm,
+    );
 
   const [
     modalOpen,
     setModalOpen,
-  ] = useState(false);
+  ] =
+    useState(false);
 
   const [
     saving,
     setSaving,
-  ] = useState(false);
+  ] =
+    useState(false);
 
   const [
     formError,
     setFormError,
-  ] = useState("");
+  ] =
+    useState("");
 
 
   const [
     historyDeal,
     setHistoryDeal,
-  ] = useState<Deal | null>(
-    null,
-  );
+  ] =
+    useState<Deal | null>(
+      null,
+    );
 
   const [
     history,
     setHistory,
-  ] = useState<
-    DealStageHistory[]
-  >([]);
+  ] =
+    useState<
+      DealStageHistory[]
+    >([]);
 
   const [
     historyLoading,
     setHistoryLoading,
-  ] = useState(false);
+  ] =
+    useState(false);
 
   const [
     historyError,
     setHistoryError,
-  ] = useState("");
+  ] =
+    useState("");
 
 
   const memberLookup =
@@ -263,6 +334,40 @@ export default function DealsPage() {
           ),
         ),
       [members],
+    );
+
+
+  const loadSummary =
+    useCallback(
+      async () => {
+        setSummaryError("");
+
+        try {
+          const data =
+            await apiRequest<
+              DealSummary
+            >(
+              `/workspaces/${workspace.workspace_id}/deals/summary`,
+            );
+
+          setSummary(
+            data,
+          );
+        } catch (error) {
+          setSummaryError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load deal summary",
+          );
+
+          setSummary(
+            null,
+          );
+        }
+      },
+      [
+        workspace.workspace_id,
+      ],
     );
 
 
@@ -286,9 +391,13 @@ export default function DealsPage() {
                 : page * PAGE_SIZE,
             ),
 
-            sort_by: sortBy,
-            sort_order: sortOrder,
+            sort_by:
+              sortBy,
+
+            sort_order:
+              sortOrder,
           });
+
 
         if (search) {
           params.set(
@@ -297,6 +406,7 @@ export default function DealsPage() {
           );
         }
 
+
         if (stageFilter) {
           params.set(
             "stage",
@@ -304,12 +414,14 @@ export default function DealsPage() {
           );
         }
 
+
         if (companyFilter) {
           params.set(
             "company_id",
             companyFilter,
           );
         }
+
 
         try {
           const data =
@@ -319,16 +431,23 @@ export default function DealsPage() {
               `/workspaces/${workspace.workspace_id}/deals?${params}`,
             );
 
+
           if (
             !data.length &&
             page > 0 &&
             view === "list"
           ) {
-            setPage(page - 1);
+            setPage(
+              page - 1,
+            );
+
             return;
           }
 
-          setDeals(data);
+
+          setDeals(
+            data,
+          );
         } catch (error) {
           setError(
             error instanceof Error
@@ -336,7 +455,9 @@ export default function DealsPage() {
               : "Unable to load deals",
           );
         } finally {
-          setLoading(false);
+          setLoading(
+            false,
+          );
         }
       },
       [
@@ -354,7 +475,16 @@ export default function DealsPage() {
 
   useEffect(() => {
     void loadDeals();
-  }, [loadDeals]);
+  }, [
+    loadDeals,
+  ]);
+
+
+  useEffect(() => {
+    void loadSummary();
+  }, [
+    loadSummary,
+  ]);
 
 
   useEffect(() => {
@@ -406,17 +536,23 @@ export default function DealsPage() {
         "new",
       ) === "1";
 
+
     setCompanyFilter(
       companyId,
     );
 
     setPage(0);
 
+
     if (!createNew) {
       return;
     }
 
-    setEditing(null);
+
+    setEditing(
+      null,
+    );
+
 
     setForm({
       ...emptyDealForm,
@@ -424,15 +560,20 @@ export default function DealsPage() {
       contact_id: contactId,
     });
 
+
     setFormError("");
     setModalOpen(true);
+
 
     const nextParams =
       new URLSearchParams(
         searchParams,
       );
 
-    nextParams.delete("new");
+    nextParams.delete(
+      "new",
+    );
+
 
     setSearchParams(
       nextParams,
@@ -451,7 +592,8 @@ export default function DealsPage() {
     value: string,
   ) {
     if (
-      field === "company_id"
+      field ===
+      "company_id"
     ) {
       const contact =
         contacts.find(
@@ -460,10 +602,12 @@ export default function DealsPage() {
             form.contact_id,
         );
 
+
       setForm({
         ...form,
 
-        company_id: value,
+        company_id:
+          value,
 
         contact_id:
           !value ||
@@ -477,6 +621,7 @@ export default function DealsPage() {
       return;
     }
 
+
     setForm({
       ...form,
       [field]: value,
@@ -485,8 +630,14 @@ export default function DealsPage() {
 
 
   function openCreate() {
-    setEditing(null);
-    setForm(emptyDealForm);
+    setEditing(
+      null,
+    );
+
+    setForm(
+      emptyDealForm,
+    );
+
     setFormError("");
     setModalOpen(true);
   }
@@ -495,8 +646,14 @@ export default function DealsPage() {
   function openEdit(
     deal: Deal,
   ) {
-    setEditing(deal);
-    setForm(toForm(deal));
+    setEditing(
+      deal,
+    );
+
+    setForm(
+      toForm(deal),
+    );
+
     setFormError("");
     setModalOpen(true);
   }
@@ -504,7 +661,9 @@ export default function DealsPage() {
 
   function closeModal() {
     if (!saving) {
-      setModalOpen(false);
+      setModalOpen(
+        false,
+      );
     }
   }
 
@@ -527,13 +686,18 @@ export default function DealsPage() {
     async (event) => {
       event.preventDefault();
 
+
       const name =
         form.name.trim();
 
+
       const amount =
         form.amount
-          ? Number(form.amount)
+          ? Number(
+              form.amount,
+            )
           : null;
+
 
       const probability =
         form.probability
@@ -570,7 +734,8 @@ export default function DealsPage() {
       const payload = {
         name,
         amount,
-        stage: form.stage,
+        stage:
+          form.stage,
         probability,
 
         expected_close_date:
@@ -601,6 +766,7 @@ export default function DealsPage() {
       setSaving(true);
       setFormError("");
 
+
       try {
         await apiRequest<Deal>(
           editing
@@ -619,9 +785,16 @@ export default function DealsPage() {
           },
         );
 
-        setModalOpen(false);
 
-        await loadDeals();
+        setModalOpen(
+          false,
+        );
+
+
+        await Promise.all([
+          loadDeals(),
+          loadSummary(),
+        ]);
       } catch (error) {
         setFormError(
           error instanceof Error
@@ -629,7 +802,9 @@ export default function DealsPage() {
             : "Unable to save deal",
         );
       } finally {
-        setSaving(false);
+        setSaving(
+          false,
+        );
       }
     };
 
@@ -638,15 +813,19 @@ export default function DealsPage() {
     deal: Deal,
     stage: DealStage,
   ) {
-    if (deal.stage === stage) {
+    if (
+      deal.stage === stage
+    ) {
       return;
     }
+
 
     try {
       await apiRequest<Deal>(
         `/workspaces/${workspace.workspace_id}/deals/${deal.id}`,
         {
-          method: "PATCH",
+          method:
+            "PATCH",
 
           body:
             JSON.stringify({
@@ -655,7 +834,11 @@ export default function DealsPage() {
         },
       );
 
-      await loadDeals();
+
+      await Promise.all([
+        loadDeals(),
+        loadSummary(),
+      ]);
     } catch (error) {
       window.alert(
         error instanceof Error
@@ -677,15 +860,21 @@ export default function DealsPage() {
       return;
     }
 
+
     try {
       await apiRequest<void>(
         `/workspaces/${workspace.workspace_id}/deals/${deal.id}`,
         {
-          method: "DELETE",
+          method:
+            "DELETE",
         },
       );
 
-      await loadDeals();
+
+      await Promise.all([
+        loadDeals(),
+        loadSummary(),
+      ]);
     } catch (error) {
       window.alert(
         error instanceof Error
@@ -699,10 +888,14 @@ export default function DealsPage() {
   async function openHistory(
     deal: Deal,
   ) {
-    setHistoryDeal(deal);
+    setHistoryDeal(
+      deal,
+    );
+
     setHistory([]);
     setHistoryError("");
     setHistoryLoading(true);
+
 
     try {
       const data =
@@ -712,7 +905,9 @@ export default function DealsPage() {
           `/workspaces/${workspace.workspace_id}/deals/${deal.id}/stage-history`,
         );
 
-      setHistory(data);
+      setHistory(
+        data,
+      );
     } catch (error) {
       setHistoryError(
         error instanceof Error
@@ -720,7 +915,9 @@ export default function DealsPage() {
           : "Unable to load history",
       );
     } finally {
-      setHistoryLoading(false);
+      setHistoryLoading(
+        false,
+      );
     }
   }
 
@@ -734,6 +931,7 @@ export default function DealsPage() {
       return "Unassigned";
     }
 
+
     if (
       deal.owner_membership_id ===
       workspace.membership_id
@@ -744,6 +942,7 @@ export default function DealsPage() {
         ) || "You"
       );
     }
+
 
     return (
       memberLookup.get(
@@ -760,6 +959,7 @@ export default function DealsPage() {
     setCompanyFilter("");
     setPage(0);
 
+
     setSearchParams(
       {},
       {
@@ -767,6 +967,14 @@ export default function DealsPage() {
       },
     );
   }
+
+
+  const hasFilters =
+    Boolean(
+      search ||
+      stageFilter ||
+      companyFilter,
+    );
 
 
   return (
@@ -805,6 +1013,7 @@ export default function DealsPage() {
             List
           </button>
 
+
           <button
             type="button"
             className={
@@ -820,10 +1029,13 @@ export default function DealsPage() {
             Pipeline
           </button>
 
+
           <button
             type="button"
             className="primary-button"
-            onClick={openCreate}
+            onClick={
+              openCreate
+            }
           >
             + Add Deal
           </button>
@@ -831,16 +1043,139 @@ export default function DealsPage() {
       </div>
 
 
+      {summaryError && (
+        <div className="data-error">
+          {summaryError}
+        </div>
+      )}
+
+
+      {summary && (
+        <section className="metrics-grid">
+          <article className="metric-card">
+            <span>
+              Open Deals
+            </span>
+
+            <strong>
+              {
+                summary.open_deals
+              }
+            </strong>
+
+            <small>
+              Active opportunities
+            </small>
+          </article>
+
+
+          <article className="metric-card">
+            <span>
+              Open Pipeline
+            </span>
+
+            <strong>
+              {formatCurrency(
+                Number(
+                  summary.open_value,
+                ) || 0,
+              )}
+            </strong>
+
+            <small>
+              Active opportunity value
+            </small>
+          </article>
+
+
+          <article className="metric-card">
+            <span>
+              Won Deals
+            </span>
+
+            <strong>
+              {
+                summary.won_deals
+              }
+            </strong>
+
+            <small>
+              Closed successfully
+            </small>
+          </article>
+
+
+          <article className="metric-card">
+            <span>
+              Won Value
+            </span>
+
+            <strong>
+              {formatCurrency(
+                Number(
+                  summary.won_value,
+                ) || 0,
+              )}
+            </strong>
+
+            <small>
+              Revenue won
+            </small>
+          </article>
+
+
+          <article className="metric-card">
+            <span>
+              Lost Deals
+            </span>
+
+            <strong>
+              {
+                summary.lost_deals
+              }
+            </strong>
+
+            <small>
+              Closed lost
+            </small>
+          </article>
+
+
+          <article className="metric-card">
+            <span>
+              Lost Value
+            </span>
+
+            <strong>
+              {formatCurrency(
+                Number(
+                  summary.lost_value,
+                ) || 0,
+              )}
+            </strong>
+
+            <small>
+              Opportunity value lost
+            </small>
+          </article>
+        </section>
+      )}
+
+
       <section className="card">
         <div className="company-toolbar">
           <form
             className="company-search"
-            onSubmit={handleSearch}
+            onSubmit={
+              handleSearch
+            }
           >
             <input
               type="search"
               placeholder="Search deals..."
-              value={searchInput}
+              value={
+                searchInput
+              }
               onChange={(event) =>
                 setSearchInput(
                   event.target.value,
@@ -848,13 +1183,13 @@ export default function DealsPage() {
               }
             />
 
+
             <button className="secondary-button">
               Search
             </button>
 
-            {(search ||
-              stageFilter ||
-              companyFilter) && (
+
+            {hasFilters && (
               <button
                 type="button"
                 className="text-action-button"
@@ -873,7 +1208,9 @@ export default function DealsPage() {
               Stage
 
               <select
-                value={stageFilter}
+                value={
+                  stageFilter
+                }
                 onChange={(event) => {
                   setStageFilter(
                     event.target.value,
@@ -886,11 +1223,16 @@ export default function DealsPage() {
                   All Stages
                 </option>
 
+
                 {stages.map(
                   (stage) => (
                     <option
-                      key={stage}
-                      value={stage}
+                      key={
+                        stage
+                      }
+                      value={
+                        stage
+                      }
                     >
                       {stage
                         .charAt(0)
@@ -914,11 +1256,13 @@ export default function DealsPage() {
                   const value =
                     event.target.value;
 
+
                   setCompanyFilter(
                     value,
                   );
 
                   setPage(0);
+
 
                   if (value) {
                     setSearchParams(
@@ -946,13 +1290,20 @@ export default function DealsPage() {
                   All Companies
                 </option>
 
+
                 {companies.map(
                   (company) => (
                     <option
-                      key={company.id}
-                      value={company.id}
+                      key={
+                        company.id
+                      }
+                      value={
+                        company.id
+                      }
                     >
-                      {company.name}
+                      {
+                        company.name
+                      }
                     </option>
                   ),
                 )}
@@ -964,7 +1315,9 @@ export default function DealsPage() {
               Sort
 
               <select
-                value={sortBy}
+                value={
+                  sortBy
+                }
                 onChange={(event) => {
                   setSortBy(
                     event.target
@@ -1001,7 +1354,9 @@ export default function DealsPage() {
               Order
 
               <select
-                value={sortOrder}
+                value={
+                  sortOrder
+                }
                 onChange={(event) => {
                   setSortOrder(
                     event.target
@@ -1038,7 +1393,9 @@ export default function DealsPage() {
         ) : deals.length ? (
           view === "pipeline" ? (
             <DealPipeline
-              deals={deals}
+              deals={
+                deals
+              }
               onStageChange={
                 changeStage
               }
@@ -1051,7 +1408,9 @@ export default function DealsPage() {
           ) : (
             <>
               <DealTable
-                deals={deals}
+                deals={
+                  deals
+                }
                 companies={
                   companies
                 }
@@ -1072,8 +1431,11 @@ export default function DealsPage() {
                 }
               />
 
+
               <Pagination
-                page={page}
+                page={
+                  page
+                }
                 hasNext={
                   deals.length ===
                   PAGE_SIZE
@@ -1095,25 +1457,22 @@ export default function DealsPage() {
             </h2>
 
             <p>
-              {search ||
-              stageFilter ||
-              companyFilter
+              {hasFilters
                 ? "Try changing your search or filters."
                 : "Create your first deal."}
             </p>
 
-            {!search &&
-              !stageFilter &&
-              !companyFilter && (
-                <button
-                  className="primary-button"
-                  onClick={
-                    openCreate
-                  }
-                >
-                  Add Deal
-                </button>
-              )}
+
+            {!hasFilters && (
+              <button
+                className="primary-button"
+                onClick={
+                  openCreate
+                }
+              >
+                Add Deal
+              </button>
+            )}
           </div>
         )}
       </section>
@@ -1131,13 +1490,17 @@ export default function DealsPage() {
               ? "Update the sales opportunity."
               : "Create a new sales opportunity."
           }
-          disabled={saving}
+          disabled={
+            saving
+          }
           onClose={
             closeModal
           }
         >
           <DealForm
-            form={form}
+            form={
+              form
+            }
             companies={
               companies
             }
@@ -1150,7 +1513,9 @@ export default function DealsPage() {
             canManageOwners={
               canManageOwners
             }
-            saving={saving}
+            saving={
+              saving
+            }
             error={
               formError
             }
@@ -1170,9 +1535,15 @@ export default function DealsPage() {
 
       {historyDeal && (
         <DealHistory
-          deal={historyDeal}
-          history={history}
-          members={members}
+          deal={
+            historyDeal
+          }
+          history={
+            history
+          }
+          members={
+            members
+          }
           loading={
             historyLoading
           }
@@ -1180,7 +1551,9 @@ export default function DealsPage() {
             historyError
           }
           onClose={() =>
-            setHistoryDeal(null)
+            setHistoryDeal(
+              null,
+            )
           }
         />
       )}

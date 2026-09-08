@@ -10,8 +10,8 @@ from app.modules.crm.models import (
     Deal,
     DealStageHistory,
 )
-from app.modules.crm.models.deal import DealStage
 from app.modules.crm.models.activity import ActivityType
+from app.modules.crm.models.deal import DealStage
 from app.modules.crm.schemas import (
     ActivityCreate,
     ActivityUpdate,
@@ -330,20 +330,16 @@ def update_company(
             owner_membership_id,
         )
 
-        company.owner_membership_id = (
-            owner_membership_id
-        )
+        company.owner_membership_id = owner_membership_id
 
     if "name" in changes:
         name = changes["name"]
 
         if name is not None:
             name = name.strip()
-
             company.name = name
-
-            company.normalized_name = (
-                normalize_company_name(name)
+            company.normalized_name = normalize_company_name(
+                name
             )
 
     if "domain" in changes:
@@ -556,12 +552,10 @@ def create_contact(
             data.email
         )
 
-        existing_contact = (
-            get_contact_by_normalized_email(
-                db,
-                membership.workspace_id,
-                normalized_email,
-            )
+        existing_contact = get_contact_by_normalized_email(
+            db,
+            membership.workspace_id,
+            normalized_email,
         )
 
         if existing_contact is not None:
@@ -670,9 +664,7 @@ def update_contact(
             owner_membership_id,
         )
 
-        contact.owner_membership_id = (
-            owner_membership_id
-        )
+        contact.owner_membership_id = owner_membership_id
 
     if "company_id" in changes:
         company_id = changes["company_id"]
@@ -699,12 +691,10 @@ def update_contact(
                 email
             )
 
-            existing_contact = (
-                get_contact_by_normalized_email(
-                    db,
-                    membership.workspace_id,
-                    normalized_email,
-                )
+            existing_contact = get_contact_by_normalized_email(
+                db,
+                membership.workspace_id,
+                normalized_email,
             )
 
             if (
@@ -716,9 +706,7 @@ def update_contact(
                 )
 
             contact.email = email.strip()
-            contact.normalized_email = (
-                normalized_email
-            )
+            contact.normalized_email = normalized_email
 
         else:
             contact.email = None
@@ -790,6 +778,75 @@ def get_deal(
     )
 
     return db.scalar(statement)
+
+
+def get_deal_summary(
+    db: Session,
+    membership: WorkspaceMembership,
+) -> dict:
+    conditions = visibility_conditions(
+        Deal,
+        membership,
+    )
+
+    open_statement = select(
+        func.count(Deal.id),
+        func.coalesce(
+            func.sum(Deal.amount),
+            0,
+        ),
+    ).where(
+        *conditions,
+        Deal.stage.notin_(
+            [
+                DealStage.WON,
+                DealStage.LOST,
+            ]
+        ),
+    )
+
+    open_deals, open_value = db.execute(
+        open_statement
+    ).one()
+
+    won_statement = select(
+        func.count(Deal.id),
+        func.coalesce(
+            func.sum(Deal.amount),
+            0,
+        ),
+    ).where(
+        *conditions,
+        Deal.stage == DealStage.WON,
+    )
+
+    won_deals, won_value = db.execute(
+        won_statement
+    ).one()
+
+    lost_statement = select(
+        func.count(Deal.id),
+        func.coalesce(
+            func.sum(Deal.amount),
+            0,
+        ),
+    ).where(
+        *conditions,
+        Deal.stage == DealStage.LOST,
+    )
+
+    lost_deals, lost_value = db.execute(
+        lost_statement
+    ).one()
+
+    return {
+        "open_deals": open_deals or 0,
+        "open_value": open_value or 0,
+        "won_deals": won_deals or 0,
+        "won_value": won_value or 0,
+        "lost_deals": lost_deals or 0,
+        "lost_value": lost_value or 0,
+    }
 
 
 def list_deal_stage_history(
@@ -1009,9 +1066,7 @@ def update_deal(
             owner_membership_id,
         )
 
-        deal.owner_membership_id = (
-            owner_membership_id
-        )
+        deal.owner_membership_id = owner_membership_id
 
     if "company_id" in changes:
         company_id = changes["company_id"]
@@ -1318,9 +1373,7 @@ def update_activity(
             owner_membership_id,
         )
 
-        activity.owner_membership_id = (
-            owner_membership_id
-        )
+        activity.owner_membership_id = owner_membership_id
 
     if "company_id" in changes:
         company_id = changes["company_id"]
