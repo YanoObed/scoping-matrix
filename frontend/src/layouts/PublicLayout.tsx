@@ -62,7 +62,7 @@ export default function PublicLayout() {
 
         <div className="footer-links">
           <span>
-            © 2026 Scoping Matrix
+            © 2026 Scoping Matrix · Obadia Yano
           </span>
 
           <a href="#privacy">

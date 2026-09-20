@@ -17,16 +17,12 @@ class WorkspaceRole(str, enum.Enum):
 
 class WorkspaceMembership(CoreModel):
     __tablename__ = "workspace_memberships"
+
     __table_args__ = (
         UniqueConstraint(
             "user_id",
             "workspace_id",
             name="uq_workspace_memberships_user_id_workspace_id",
-        ),
-        UniqueConstraint(
-            "workspace_id",
-            "id",
-            name="uq_workspace_memberships_workspace_id_id",
         ),
     )
 
