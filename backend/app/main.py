@@ -1,5 +1,9 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from redis.asyncio import Redis
 
 from app.api.health import router as health_router
 from app.core.config import settings
@@ -8,9 +12,21 @@ from app.modules.identity.router import router as identity_router
 from app.modules.identity.workspace_router import router as workspace_router
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    redis_client = Redis.from_url(settings.redis_url)
+    app.state.redis = redis_client
+
+    try:
+        yield
+    finally:
+        await redis_client.aclose()
+
+
 app = FastAPI(
     title="Scoping Matrix API",
     version=settings.app_version,
+    lifespan=lifespan,
 )
 
 
