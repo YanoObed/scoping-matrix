@@ -1,4 +1,5 @@
 from uuid import UUID
+from uuid import uuid4
 
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
@@ -23,6 +24,7 @@ from app.modules.crm.schemas import (
     DealUpdate,
 )
 from app.modules.identity.models import WorkspaceMembership
+from app.shared.database.outbox import OutboxEvent
 
 
 def normalize_company_name(name: str) -> str:
@@ -1043,6 +1045,7 @@ def update_deal(
             new_stage is not None
             and new_stage != deal.stage
         ):
+            event_id = uuid4()
             db.add(
                 DealStageHistory(
                     workspace_id=membership.workspace_id,
@@ -1050,6 +1053,21 @@ def update_deal(
                     from_stage=deal.stage.value,
                     to_stage=new_stage.value,
                     changed_by_membership_id=membership.id,
+                )
+            )
+            db.add(
+                OutboxEvent(
+                    id=event_id,
+                    event_type="crm.deal.stage_changed.v1",
+                    aggregate_key=str(deal.id),
+                    payload={
+                        "event_id": str(event_id),
+                        "workspace_id": str(membership.workspace_id),
+                        "deal_id": str(deal.id),
+                        "from_stage": deal.stage.value,
+                        "to_stage": new_stage.value,
+                        "changed_by_membership_id": str(membership.id),
+                    },
                 )
             )
 
